@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 
 // --- SVG Icons (reused for consistency) ---
 const FingerprintIcon = () => (

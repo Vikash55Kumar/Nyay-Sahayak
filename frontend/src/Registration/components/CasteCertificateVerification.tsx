@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import digilockerLogo from '../../assets/digilocker-seeklogo.png';
 import FileUploadComponent from '../../components/FileUploadComponent';
 

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import './App.css';
 import indiaBackground from '../assets/in.svg';
 import atrocityVictimSupport from '../assets/victim.png';

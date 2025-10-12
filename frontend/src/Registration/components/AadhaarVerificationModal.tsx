@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import UserDetailsDisplay from './UserDetailsDisplay.tsx';
 import CasteCertificateVerification from './CasteCertificateVerification.tsx';
 

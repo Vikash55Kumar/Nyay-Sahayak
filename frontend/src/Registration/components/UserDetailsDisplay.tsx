@@ -1,5 +1,3 @@
-import React from 'react';
-
 // --- A single read-only field ---
 const DetailField = ({ label, value }: { label: string; value: string }) => (
     <div>

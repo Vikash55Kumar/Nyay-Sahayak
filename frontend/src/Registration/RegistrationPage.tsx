@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import AadhaarVerificationModal from './components/AadhaarVerificationModal';
 import LoginModal from './components/LoginModal';
