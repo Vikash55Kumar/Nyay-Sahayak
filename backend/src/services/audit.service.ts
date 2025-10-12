@@ -1,253 +1,491 @@
 import { AuditLog } from '../models/auditLog.models';
+import { ITargetResource } from '../types/audit.types';
+import mongoose from 'mongoose';
 
 export class AuditService {
   
-  // Simple compatibility methods for prototype
-  static async logUserRegistration(userId: any, req: any, metadata: any) {
-    console.log('🔍 AUDIT: User registered', { userId, metadata });
-    // For prototype, just log to console
-  }
-
-  static async logProfileCreation(userId: any, profileId: any, req: any, metadata: any) {
-    console.log('🔍 AUDIT: Profile created', { userId, profileId, metadata });
-    // For prototype, just log to console
-  }
-
-  static async logLogin(userId: any, req: any) {
-    console.log('🔍 AUDIT: User login', { userId, ip: req.ip });
-    // For prototype, just log to console
+  /**
+   * Core method to log audit events with proper schema mapping
+   */
+  private static async logEvent(
+    action: string,
+    performedBy: mongoose.Types.ObjectId,
+    targetResource: ITargetResource,
+    ipAddress: string,
+    userAgent?: string,
+    metadata?: Record<string, any>
+  ): Promise<any> {
+    try {
+      return await AuditLog.create({
+        action,
+        performedBy,
+        targetResource,
+        ipAddress,
+        userAgent,
+        metadata: metadata || {}
+      });
+    } catch (error) {
+      console.error('Failed to create audit log:', error);
+      throw error;
+    }
   }
 
   /**
-   * Log user authentication events
+   * Log user registration
    */
-  static async logAuth(
-    userId: string, 
-    action: 'LOGIN' | 'LOGOUT' | 'REGISTRATION' | 'PASSWORD_CHANGE',
-    details?: any
+  static async logUserRegistration(
+    userId: mongoose.Types.ObjectId,
+    req: any,
+    metadata?: any
   ): Promise<void> {
-    await AuditLog.create({
+    await this.logEvent(
+      'USER_REGISTERED',
       userId,
-      action,
-      resource: 'USER_AUTH',
-      details: {
-        timestamp: new Date(),
-        userAgent: details?.userAgent || 'Unknown',
-        ipAddress: details?.ipAddress || '127.0.0.1',
-        ...details
+      { type: 'USER', id: userId },
+      req.ip || '127.0.0.1',
+      req.get('User-Agent'),
+      {
+        registrationMethod: metadata?.method || 'AADHAAR_OTP',
+        verificationStatus: metadata?.verified || false,
+        ...metadata
       }
-    });
+    );
   }
 
   /**
-   * Log profile operations
+   * Log user login
    */
-  static async logProfile(
-    userId: string,
-    action: 'PROFILE_CREATED' | 'PROFILE_UPDATED' | 'PROFILE_VERIFIED' | 'DOCUMENTS_UPLOADED',
-    details?: any
+  static async logLogin(
+    userId: mongoose.Types.ObjectId,
+    req: any,
+    metadata?: any
   ): Promise<void> {
-    await AuditLog.create({
+    await this.logEvent(
+      'USER_LOGIN',
       userId,
-      action,
-      resource: 'BENEFICIARY_PROFILE',
-      details: {
-        timestamp: new Date(),
-        changes: details?.changes || {},
-        previousState: details?.previousState || null,
-        newState: details?.newState || null,
-        ...details
+      { type: 'USER', id: userId },
+      req.ip || '127.0.0.1',
+      req.get('User-Agent'),
+      {
+        loginMethod: metadata?.method || 'OTP',
+        deviceInfo: metadata?.device,
+        ...metadata
       }
-    });
+    );
   }
 
   /**
-   * Log application lifecycle events
+   * Log beneficiary profile creation
    */
-  static async logApplication(
-    userId: string,
-    action: 'APPLICATION_SUBMITTED' | 'APPLICATION_APPROVED' | 'APPLICATION_REJECTED' | 'APPLICATION_UPDATED',
-    applicationId: string,
-    details?: any
+  static async logProfileCreation(
+    userId: mongoose.Types.ObjectId,
+    profileId: mongoose.Types.ObjectId,
+    req: any,
+    metadata?: any
   ): Promise<void> {
-    await AuditLog.create({
+    await this.logEvent(
+      'PROFILE_CREATED',
       userId,
-      action,
-      resource: 'APPLICATION',
-      resourceId: applicationId,
-      details: {
-        timestamp: new Date(),
-        applicationId,
-        statusChange: details?.statusChange || null,
-        officerRemarks: details?.officerRemarks || null,
-        ...details
+      { type: 'BENEFICIARY_PROFILE', id: profileId },
+      req.ip || '127.0.0.1',
+      req.get('User-Agent'),
+      {
+        profileData: metadata?.profileData,
+        documentsCount: metadata?.documentsCount || 0,
+        ...metadata
       }
-    });
+    );
   }
 
   /**
-   * Log payment transactions
+   * Log profile verification
    */
-  static async logPayment(
-    userId: string,
-    action: 'PAYMENT_INITIATED' | 'PAYMENT_COMPLETED' | 'PAYMENT_FAILED',
-    paymentId: string,
-    details?: any
+  static async logProfileVerification(
+    performedBy: mongoose.Types.ObjectId,
+    profileId: mongoose.Types.ObjectId,
+    req: any,
+    metadata?: any
   ): Promise<void> {
-    await AuditLog.create({
+    await this.logEvent(
+      'PROFILE_VERIFIED',
+      performedBy,
+      { type: 'BENEFICIARY_PROFILE', id: profileId },
+      req.ip || '127.0.0.1',
+      req.get('User-Agent'),
+      {
+        verificationStatus: metadata?.status || 'VERIFIED',
+        verifierRole: metadata?.role,
+        remarks: metadata?.remarks,
+        ...metadata
+      }
+    );
+  }
+
+  /**
+   * Log application submission
+   */
+  static async logApplicationSubmission(
+    userId: mongoose.Types.ObjectId,
+    applicationId: mongoose.Types.ObjectId,
+    req: any,
+    metadata?: any
+  ): Promise<void> {
+    await this.logEvent(
+      'APPLICATION_SUBMITTED',
       userId,
-      action,
-      resource: 'PAYMENT',
-      resourceId: paymentId,
-      details: {
-        timestamp: new Date(),
-        paymentId,
-        amount: details?.amount || 0,
-        transactionRef: details?.transactionRef || null,
-        bankAccount: details?.bankAccount || null,
-        ...details
+      { type: 'APPLICATION', id: applicationId },
+      req.ip || '127.0.0.1',
+      req.get('User-Agent'),
+      {
+        applicationType: metadata?.type,
+        applicationNumber: metadata?.applicationNumber,
+        documentsAttached: metadata?.documentsCount || 0,
+        ...metadata
       }
-    });
+    );
   }
 
   /**
-   * Log system integrations
+   * Log application review
    */
-  static async logIntegration(
-    userId: string,
-    action: 'AADHAAR_VERIFICATION' | 'DIGILOCKER_FETCH' | 'CCTNS_QUERY' | 'PFMS_PAYMENT',
-    details?: any
+  static async logApplicationReview(
+    reviewerId: mongoose.Types.ObjectId,
+    applicationId: mongoose.Types.ObjectId,
+    req: any,
+    metadata?: any
   ): Promise<void> {
-    await AuditLog.create({
+    await this.logEvent(
+      'APPLICATION_REVIEWED',
+      reviewerId,
+      { type: 'APPLICATION', id: applicationId },
+      req.ip || '127.0.0.1',
+      req.get('User-Agent'),
+      {
+        previousStatus: metadata?.previousStatus,
+        newStatus: metadata?.newStatus,
+        reviewComments: metadata?.comments,
+        reviewerRole: metadata?.role,
+        ...metadata
+      }
+    );
+  }
+
+  /**
+   * Log application approval
+   */
+  static async logApplicationApproval(
+    approverId: mongoose.Types.ObjectId,
+    applicationId: mongoose.Types.ObjectId,
+    req: any,
+    metadata?: any
+  ): Promise<void> {
+    await this.logEvent(
+      'APPLICATION_APPROVED',
+      approverId,
+      { type: 'APPLICATION', id: applicationId },
+      req.ip || '127.0.0.1',
+      req.get('User-Agent'),
+      {
+        approvedAmount: metadata?.amount,
+        approvalComments: metadata?.comments,
+        approverRole: metadata?.role,
+        nextSteps: metadata?.nextSteps,
+        ...metadata
+      }
+    );
+  }
+
+  /**
+   * Log application rejection
+   */
+  static async logApplicationRejection(
+    rejectorId: mongoose.Types.ObjectId,
+    applicationId: mongoose.Types.ObjectId,
+    req: any,
+    metadata?: any
+  ): Promise<void> {
+    await this.logEvent(
+      'APPLICATION_REJECTED',
+      rejectorId,
+      { type: 'APPLICATION', id: applicationId },
+      req.ip || '127.0.0.1',
+      req.get('User-Agent'),
+      {
+        rejectionReason: metadata?.reason,
+        rejectionComments: metadata?.comments,
+        rejectorRole: metadata?.role,
+        canReapply: metadata?.canReapply || false,
+        ...metadata
+      }
+    );
+  }
+
+  /**
+   * Log payment initiation
+   */
+  static async logPaymentInitiation(
+    initiatorId: mongoose.Types.ObjectId,
+    paymentId: mongoose.Types.ObjectId,
+    req: any,
+    metadata?: any
+  ): Promise<void> {
+    await this.logEvent(
+      'PAYMENT_INITIATED',
+      initiatorId,
+      { type: 'PAYMENT', id: paymentId },
+      req.ip || '127.0.0.1',
+      req.get('User-Agent'),
+      {
+        amount: metadata?.amount,
+        transactionId: metadata?.transactionId,
+        beneficiaryAadhaar: metadata?.aadhaar ? '****' + metadata.aadhaar.slice(-4) : undefined,
+        paymentMethod: 'DBT',
+        ...metadata
+      }
+    );
+  }
+
+  /**
+   * Log payment completion
+   */
+  static async logPaymentCompletion(
+    systemUserId: mongoose.Types.ObjectId,
+    paymentId: mongoose.Types.ObjectId,
+    req: any,
+    metadata?: any
+  ): Promise<void> {
+    await this.logEvent(
+      'PAYMENT_COMPLETED',
+      systemUserId,
+      { type: 'PAYMENT', id: paymentId },
+      req.ip || '127.0.0.1',
+      req.get('User-Agent'),
+      {
+        finalAmount: metadata?.amount,
+        transactionReference: metadata?.transactionRef,
+        pfmsResponse: metadata?.pfmsResponse,
+        completionTime: metadata?.completionTime,
+        ...metadata
+      }
+    );
+  }
+
+  /**
+   * Log payment failure
+   */
+  static async logPaymentFailure(
+    systemUserId: mongoose.Types.ObjectId,
+    paymentId: mongoose.Types.ObjectId,
+    req: any,
+    metadata?: any
+  ): Promise<void> {
+    await this.logEvent(
+      'PAYMENT_FAILED',
+      systemUserId,
+      { type: 'PAYMENT', id: paymentId },
+      req.ip || '127.0.0.1',
+      req.get('User-Agent'),
+      {
+        failureReason: metadata?.reason,
+        pfmsError: metadata?.pfmsError,
+        retryCount: metadata?.retryCount || 0,
+        willRetry: metadata?.willRetry || false,
+        ...metadata
+      }
+    );
+  }
+
+  /**
+   * Log document upload
+   */
+  static async logDocumentUpload(
+    userId: mongoose.Types.ObjectId,
+    targetResourceType: 'APPLICATION' | 'BENEFICIARY_PROFILE',
+    targetResourceId: mongoose.Types.ObjectId,
+    req: any,
+    metadata?: any
+  ): Promise<void> {
+    await this.logEvent(
+      'DOCUMENT_UPLOADED',
       userId,
-      action,
-      resource: 'EXTERNAL_INTEGRATION',
-      details: {
-        timestamp: new Date(),
-        service: details?.service || 'Unknown',
-        requestId: details?.requestId || null,
-        responseStatus: details?.responseStatus || null,
-        responseTime: details?.responseTime || null,
-        ...details
+      { type: targetResourceType, id: targetResourceId },
+      req.ip || '127.0.0.1',
+      req.get('User-Agent'),
+      {
+        fileName: metadata?.fileName,
+        fileSize: metadata?.fileSize,
+        documentType: metadata?.documentType,
+        mimeType: metadata?.mimeType,
+        uploadSource: metadata?.source || 'WEB',
+        ...metadata
       }
-    });
+    );
   }
 
   /**
-   * Log security events
+   * Log document verification
    */
-  static async logSecurity(
-    userId: string | null,
-    action: 'FAILED_LOGIN' | 'SUSPICIOUS_ACTIVITY' | 'DATA_BREACH_ATTEMPT' | 'UNAUTHORIZED_ACCESS',
-    details?: any
+  static async logDocumentVerification(
+    verifierId: mongoose.Types.ObjectId,
+    targetResourceType: 'APPLICATION' | 'BENEFICIARY_PROFILE',
+    targetResourceId: mongoose.Types.ObjectId,
+    req: any,
+    metadata?: any
   ): Promise<void> {
-    await AuditLog.create({
-      userId: userId || null,
-      action,
-      resource: 'SECURITY',
-      details: {
-        timestamp: new Date(),
-        severity: details?.severity || 'MEDIUM',
-        ipAddress: details?.ipAddress || '127.0.0.1',
-        userAgent: details?.userAgent || 'Unknown',
-        attemptedResource: details?.attemptedResource || null,
-        ...details
+    await this.logEvent(
+      'DOCUMENT_VERIFIED',
+      verifierId,
+      { type: targetResourceType, id: targetResourceId },
+      req.ip || '127.0.0.1',
+      req.get('User-Agent'),
+      {
+        documentType: metadata?.documentType,
+        verificationStatus: metadata?.status || 'VERIFIED',
+        verificationComments: metadata?.comments,
+        verifierRole: metadata?.role,
+        ...metadata
       }
-    });
+    );
   }
 
   /**
-   * Log admin operations
+   * Log notification sent
    */
-  static async logAdmin(
-    adminUserId: string,
-    action: 'USER_ROLE_CHANGED' | 'APPLICATION_REVIEWED' | 'SYSTEM_CONFIG_UPDATED' | 'BULK_OPERATION',
-    targetUserId?: string,
-    details?: any
+  static async logNotificationSent(
+    systemUserId: mongoose.Types.ObjectId,
+    targetUserId: mongoose.Types.ObjectId,
+    req: any,
+    metadata?: any
   ): Promise<void> {
-    await AuditLog.create({
-      userId: adminUserId,
-      action,
-      resource: 'ADMIN_OPERATION',
-      resourceId: targetUserId || null,
-      details: {
-        timestamp: new Date(),
-        targetUserId,
-        operationType: details?.operationType || null,
-        bulkCount: details?.bulkCount || null,
-        configChanges: details?.configChanges || null,
-        ...details
+    await this.logEvent(
+      'NOTIFICATION_SENT',
+      systemUserId,
+      { type: 'USER', id: targetUserId },
+      req.ip || '127.0.0.1',
+      req.get('User-Agent'),
+      {
+        notificationType: metadata?.type,
+        channel: metadata?.channel || 'SMS',
+        messageContent: metadata?.message ? metadata.message.substring(0, 100) + '...' : undefined,
+        deliveryStatus: metadata?.status,
+        ...metadata
       }
-    });
+    );
   }
 
   /**
-   * Log document operations
+   * Log role assignment
    */
-  static async logDocument(
-    userId: string,
-    action: 'DOCUMENT_UPLOADED' | 'DOCUMENT_VERIFIED' | 'DOCUMENT_REJECTED' | 'DOCUMENT_DELETED',
-    documentType: string,
-    details?: any
+  static async logRoleAssignment(
+    adminId: mongoose.Types.ObjectId,
+    targetUserId: mongoose.Types.ObjectId,
+    req: any,
+    metadata?: any
   ): Promise<void> {
-    await AuditLog.create({
-      userId,
-      action,
-      resource: 'DOCUMENT',
-      details: {
-        timestamp: new Date(),
-        documentType,
-        fileName: details?.fileName || null,
-        fileSize: details?.fileSize || null,
-        uploadSource: details?.uploadSource || 'MANUAL',
-        verificationStatus: details?.verificationStatus || null,
-        ...details
+    await this.logEvent(
+      'ROLE_ASSIGNED',
+      adminId,
+      { type: 'USER', id: targetUserId },
+      req.ip || '127.0.0.1',
+      req.get('User-Agent'),
+      {
+        previousRole: metadata?.previousRole,
+        newRole: metadata?.newRole,
+        assignmentReason: metadata?.reason,
+        adminRole: metadata?.adminRole,
+        ...metadata
       }
-    });
+    );
   }
 
   /**
-   * Get audit logs for a user
+   * Log role revocation
    */
-  static async getUserAuditLogs(
-    userId: string,
+  static async logRoleRevocation(
+    adminId: mongoose.Types.ObjectId,
+    targetUserId: mongoose.Types.ObjectId,
+    req: any,
+    metadata?: any
+  ): Promise<void> {
+    await this.logEvent(
+      'ROLE_REVOKED',
+      adminId,
+      { type: 'USER', id: targetUserId },
+      req.ip || '127.0.0.1',
+      req.get('User-Agent'),
+      {
+        revokedRole: metadata?.revokedRole,
+        revocationReason: metadata?.reason,
+        adminRole: metadata?.adminRole,
+        effectiveDate: metadata?.effectiveDate,
+        ...metadata
+      }
+    );
+  }
+
+  /**
+   * Get user activity logs
+   */
+  static async getUserActivity(
+    userId: mongoose.Types.ObjectId,
     limit: number = 50,
-    offset: number = 0
+    skip: number = 0
   ): Promise<any[]> {
-    return AuditLog.find({ userId })
-      .sort({ timestamp: -1 })
-      .limit(limit)
-      .skip(offset)
-      .lean();
+    return await (AuditLog as any).getUserActivity(userId, limit, skip);
   }
 
   /**
-   * Get audit logs for an application
+   * Get resource history
    */
-  static async getApplicationAuditLogs(applicationId: string): Promise<any[]> {
-    return AuditLog.find({
-      resource: 'APPLICATION',
-      resourceId: applicationId
+  static async getResourceHistory(
+    resourceType: 'APPLICATION' | 'PAYMENT' | 'USER' | 'BENEFICIARY_PROFILE',
+    resourceId: mongoose.Types.ObjectId,
+    limit: number = 20
+  ): Promise<any[]> {
+    return await (AuditLog as any).getResourceHistory(resourceType, resourceId, limit);
+  }
+
+  /**
+   * Get application audit trail
+   */
+  static async getApplicationAuditTrail(applicationId: mongoose.Types.ObjectId): Promise<any[]> {
+    return await AuditLog.find({
+      'targetResource.type': 'APPLICATION',
+      'targetResource.id': applicationId
     })
       .sort({ timestamp: -1 })
+      .populate('performedBy', 'aadhaarNumber role mobileNumber')
       .lean();
   }
 
   /**
-   * Get security logs
+   * Get payment audit trail
+   */
+  static async getPaymentAuditTrail(paymentId: mongoose.Types.ObjectId): Promise<any[]> {
+    return await AuditLog.find({
+      'targetResource.type': 'PAYMENT',
+      'targetResource.id': paymentId
+    })
+      .sort({ timestamp: -1 })
+      .populate('performedBy', 'aadhaarNumber role')
+      .lean();
+  }
+
+  /**
+   * Get security logs for monitoring
    */
   static async getSecurityLogs(
-    limit: number = 100,
-    severity?: string
+    fromDate: Date,
+    toDate: Date,
+    limit: number = 100
   ): Promise<any[]> {
-    const filter: any = { resource: 'SECURITY' };
-    if (severity) {
-      filter['details.severity'] = severity;
-    }
-
-    return AuditLog.find(filter)
+    return await AuditLog.find({
+      action: { $in: ['USER_LOGIN', 'APPLICATION_SUBMITTED', 'PAYMENT_INITIATED'] },
+      timestamp: { $gte: fromDate, $lte: toDate }
+    })
       .sort({ timestamp: -1 })
       .limit(limit)
+      .populate('performedBy', 'aadhaarNumber role')
       .lean();
   }
 
@@ -265,14 +503,14 @@ export class AuditService {
         $group: {
           _id: {
             action: '$action',
-            resource: '$resource'
+            resourceType: '$targetResource.type'
           },
           count: { $sum: 1 }
         }
       },
       {
         $group: {
-          _id: '$_id.resource',
+          _id: '$_id.resourceType',
           actions: {
             $push: {
               action: '$_id.action',
@@ -284,13 +522,49 @@ export class AuditService {
       }
     ];
 
-    return AuditLog.aggregate(pipeline);
+    return await AuditLog.aggregate(pipeline);
   }
 
   /**
-   * Clean old audit logs (older than retention period)
+   * Search audit logs with filters
    */
-  static async cleanOldLogs(retentionDays: number = 365): Promise<number> {
+  static async searchLogs(
+    filters: {
+      userId?: mongoose.Types.ObjectId;
+      action?: string;
+      resourceType?: string;
+      fromDate?: Date;
+      toDate?: Date;
+      ipAddress?: string;
+    },
+    limit: number = 50,
+    skip: number = 0
+  ): Promise<any[]> {
+    const query: any = {};
+
+    if (filters.userId) query.performedBy = filters.userId;
+    if (filters.action) query.action = new RegExp(filters.action, 'i');
+    if (filters.resourceType) query['targetResource.type'] = filters.resourceType;
+    if (filters.ipAddress) query.ipAddress = filters.ipAddress;
+    
+    if (filters.fromDate || filters.toDate) {
+      query.timestamp = {};
+      if (filters.fromDate) query.timestamp.$gte = filters.fromDate;
+      if (filters.toDate) query.timestamp.$lte = filters.toDate;
+    }
+
+    return await AuditLog.find(query)
+      .sort({ timestamp: -1 })
+      .limit(limit)
+      .skip(skip)
+      .populate('performedBy', 'aadhaarNumber role mobileNumber')
+      .lean();
+  }
+
+  /**
+   * Clean old audit logs (for maintenance)
+   */
+  static async cleanOldLogs(retentionDays: number = 2555): Promise<number> { // 7 years default
     const cutoffDate = new Date();
     cutoffDate.setDate(cutoffDate.getDate() - retentionDays);
 
@@ -299,63 +573,5 @@ export class AuditService {
     });
 
     return result.deletedCount || 0;
-  }
-
-  /**
-   * Search audit logs
-   */
-  static async searchLogs(
-    searchParams: {
-      userId?: string;
-      action?: string;
-      resource?: string;
-      fromDate?: Date;
-      toDate?: Date;
-      ipAddress?: string;
-    },
-    limit: number = 50,
-    offset: number = 0
-  ): Promise<any[]> {
-    const filter: any = {};
-
-    if (searchParams.userId) filter.userId = searchParams.userId;
-    if (searchParams.action) filter.action = new RegExp(searchParams.action, 'i');
-    if (searchParams.resource) filter.resource = searchParams.resource;
-    if (searchParams.ipAddress) filter['details.ipAddress'] = searchParams.ipAddress;
-    
-    if (searchParams.fromDate || searchParams.toDate) {
-      filter.timestamp = {};
-      if (searchParams.fromDate) filter.timestamp.$gte = searchParams.fromDate;
-      if (searchParams.toDate) filter.timestamp.$lte = searchParams.toDate;
-    }
-
-    return AuditLog.find(filter)
-      .sort({ timestamp: -1 })
-      .limit(limit)
-      .skip(offset)
-      .lean();
-  }
-
-  /**
-   * Log blockchain transaction
-   */
-  static async logBlockchain(
-    userId: string,
-    action: 'BLOCKCHAIN_RECORD_CREATED' | 'BLOCKCHAIN_VERIFICATION' | 'SMART_CONTRACT_EXECUTED',
-    details?: any
-  ): Promise<void> {
-    await AuditLog.create({
-      userId,
-      action,
-      resource: 'BLOCKCHAIN',
-      details: {
-        timestamp: new Date(),
-        blockHash: details?.blockHash || null,
-        transactionHash: details?.transactionHash || null,
-        contractAddress: details?.contractAddress || null,
-        gasUsed: details?.gasUsed || null,
-        ...details
-      }
-    });
   }
 }

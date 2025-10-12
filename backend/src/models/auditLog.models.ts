@@ -1,24 +1,5 @@
-import mongoose, { Document, Schema } from 'mongoose';
-
-// Target Resource interface
-export interface ITargetResource {
-  type: 'APPLICATION' | 'PAYMENT' | 'USER' | 'BENEFICIARY_PROFILE';
-  id: mongoose.Types.ObjectId;
-}
-
-// Audit Log interface
-export interface IAuditLog extends Document {
-  _id: mongoose.Types.ObjectId;
-  action: string; // 'APPLICATION_SUBMITTED', 'PAYMENT_APPROVED', etc.
-  performedBy: mongoose.Types.ObjectId; // User ID
-  targetResource: ITargetResource;
-  blockchainTxHash?: string; // When logged to blockchain
-  metadata?: Record<string, any>; // Additional context data
-  timestamp: Date;
-  ipAddress: string;
-  userAgent?: string;
-  createdAt: Date;
-}
+import mongoose, { Schema } from 'mongoose';
+import { IAuditLog, ITargetResource } from '../types/audit.types';
 
 // Target Resource Schema
 const TargetResourceSchema = new Schema<ITargetResource>({
@@ -72,7 +53,7 @@ const AuditLogSchema = new Schema<IAuditLog>({
   },
   blockchainTxHash: {
     type: String,
-    sparse: true
+    index: { sparse: true }
   },
   metadata: {
     type: Schema.Types.Mixed,
@@ -87,10 +68,28 @@ const AuditLogSchema = new Schema<IAuditLog>({
     required: true,
     validate: {
       validator: function(v: string) {
-        // Basic IP validation (IPv4 and IPv6)
-        const ipv4Regex = /^(\d{1,3}\.){3}\d{1,3}$/;
-        const ipv6Regex = /^([0-9a-fA-F]{1,4}:){7}[0-9a-fA-F]{1,4}$/;
-        return ipv4Regex.test(v) || ipv6Regex.test(v);
+        // Comprehensive IP validation (IPv4 and IPv6)
+        
+        // IPv4 validation with proper range checking
+        const ipv4Regex = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/;
+        const ipv4Match = v.match(ipv4Regex);
+        if (ipv4Match) {
+          const octets = ipv4Match.slice(1, 5).map(Number);
+          return octets.every(octet => octet >= 0 && octet <= 255);
+        }
+        
+        // IPv6 validation (including compressed formats like ::1, ::ffff:192.0.2.1)
+        const ipv6Regex = /^([0-9a-fA-F]{1,4}:){7}[0-9a-fA-F]{1,4}$|^::1$|^::$|^([0-9a-fA-F]{1,4}:)*:([0-9a-fA-F]{1,4}:)*[0-9a-fA-F]{1,4}$|^([0-9a-fA-F]{1,4}:)*::([0-9a-fA-F]{1,4}:)*[0-9a-fA-F]{1,4}$|^([0-9a-fA-F]{1,4}:)*::([0-9a-fA-F]{1,4}:)*$|^::([0-9a-fA-F]{1,4}:)*[0-9a-fA-F]{1,4}$/;
+        
+        // Also handle IPv4-mapped IPv6 addresses like ::ffff:192.0.2.1
+        const ipv4MappedRegex = /^::ffff:(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/i;
+        const ipv4MappedMatch = v.match(ipv4MappedRegex);
+        if (ipv4MappedMatch) {
+          const octets = ipv4MappedMatch.slice(1, 5).map(Number);
+          return octets.every(octet => octet >= 0 && octet <= 255);
+        }
+        
+        return ipv6Regex.test(v);
       },
       message: 'Invalid IP address format'
     }
@@ -104,7 +103,6 @@ const AuditLogSchema = new Schema<IAuditLog>({
 AuditLogSchema.index({ performedBy: 1, timestamp: -1 });
 AuditLogSchema.index({ action: 1, timestamp: -1 });
 AuditLogSchema.index({ 'targetResource.type': 1, 'targetResource.id': 1, timestamp: -1 });
-AuditLogSchema.index({ blockchainTxHash: 1 }, { sparse: true });
 
 // TTL index - remove audit logs after 7 years (legal compliance)
 AuditLogSchema.index({ timestamp: 1 }, { expireAfterSeconds: 7 * 365 * 24 * 60 * 60 });

@@ -1,23 +1,34 @@
 import express from 'express';
 import { 
-  submitIntercasteMarriageApplication,
   getApplicationStatus,
   getBeneficiaryApplications,
-  verifyMarriageCertificate,
-  checkIntercasteMarriage
+  getApplicationTimeline,
+  updateApplicationStatus
 } from '../controller/application.controller';
-import { submitAtrocityReliefApplication } from '../controller/atrocity.controller';
+import { submitCasteDiscriminationApplication, verifyAtrocityApplicationForAuthority } from '../controller/caste-discrimination.controller';
+import { checkIntercasteMarriage, submitIntercasteMarriageApplication, verifyMarriageCertificate, verifyMarriageDetailsForAuthority } from '../controller/merriage.controller';
+import { authenticate } from '../middleware/auth';
 
 const router = express.Router();
 
 // Application Management Routes
-router.post('/intercaste-marriage', submitIntercasteMarriageApplication);
-router.post('/atrocity-relief', submitAtrocityReliefApplication);
+router.post('/intercaste-marriage', authenticate, submitIntercasteMarriageApplication);
+router.post('/atrocity-relief', submitCasteDiscriminationApplication);
 router.get('/status/:applicationId', getApplicationStatus);
-router.get('/my-applications', getBeneficiaryApplications);
+router.get('/timeline/:applicationId', getApplicationTimeline); // Enhanced tracking
+router.get('/my-applications', authenticate, getBeneficiaryApplications);
+
+// Authority Routes for Status Updates
+router.put('/authority/update-status/:applicationId', authenticate, updateApplicationStatus);
 
 // Utility Routes for Marriage Verification
 router.post('/verify-marriage-certificate', verifyMarriageCertificate);
-router.post('/check-intercaste-marriage', checkIntercasteMarriage);
+router.post('/check-intercaste-marriage', authenticate, checkIntercasteMarriage);
+
+// Authority Routes for Marriage Verification
+router.post('/authority/verify-marriage-details', verifyMarriageDetailsForAuthority);
+
+// Authority Routes for Atrocity Relief Verification
+router.get('/authority/verify-atrocity/:applicationId', verifyAtrocityApplicationForAuthority);
 
 export default router;
