@@ -1,7 +1,7 @@
 import React from 'react';
 
 // --- A single read-only field ---
-const DetailField = ({ label, value }) => (
+const DetailField = ({ label, value }: { label: string; value: string }) => (
     <div>
         <label className="block text-xs font-medium text-gray-500">{label}</label>
         <div className="mt-1 p-3 bg-gray-100 border border-gray-200 rounded-md shadow-sm text-gray-700 text-sm">
@@ -11,12 +11,12 @@ const DetailField = ({ label, value }) => (
 );
 
 // --- User Details Display Component ---
-export default function UserDetailsDisplay({ onConfirm, onCancel }) {
+export default function UserDetailsDisplay({ onConfirm, onCancel }: { onConfirm: () => void; onCancel: () => void }) {
     // Dummy data for now, to be replaced with actual fetched data
     const userDetails = {
-        name: 'Rakesh Kumar',
+        name: 'Priya Sharma',
         dob: '01/01/1990',
-        gender: 'Male',
+        gender: 'Female',
         address: '123, ABC Street, New Delhi, Delhi - 110001',
         mobile: 'XXXXXX1234',
         aadhaar: 'XXXX XXXX 1234',

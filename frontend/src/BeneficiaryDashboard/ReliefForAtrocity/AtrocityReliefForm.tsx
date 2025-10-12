@@ -2,11 +2,11 @@ import React, { useState } from "react";
 import { Link } from "react-router-dom"; // Assuming you have react-router-dom for navigation
 
 // Assuming components are in these paths
-import Navbar from "/src/Layout/Navbar";
-import Footer from "/src/Layout/Footer";
-import FileUploadComponent from "/src/components/FileUploadComponent";
-import SuccessModal from "/src/components/SuccessModal";
-import indiaBackground from "/src/assets/in.svg";
+import Navbar from "../../Layout/Navbar";
+import Footer from "../../Layout/Footer";
+import FileUploadComponent from "../../components/FileUploadComponent";
+import SuccessModal from "../../components/SuccessModal";
+import indiaBackground from "../../assets/in.svg";
 
 // --- SVG Icons ---
 const FileTextIcon = () => (
@@ -115,12 +115,12 @@ const IndiaMapBackgroundBottom = () => (
 // --- Main Application Form Component ---
 export default function AtrocityReliefForm() {
   const [firNumber, setFirNumber] = useState("");
-  const [firDocument, setFirDocument] = useState(null);
+  const [firDocument, setFirDocument] = useState<File | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   const isFormValid = firNumber.trim() !== "" && firDocument;
 
-  const handleSubmit = (e) => {
+  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!isFormValid) {
       alert("Please fill all fields and upload the required document.");
@@ -224,7 +224,7 @@ export default function AtrocityReliefForm() {
                 ) : (
                   <FileUploadComponent
                     label="Upload FIR Document"
-                    onFileSelect={(file) => setFirDocument(file)}
+                    onFileSelect={(file: File) => setFirDocument(file)}
                   />
                 )}
 

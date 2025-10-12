@@ -131,7 +131,14 @@ const AvailableSchemes = () => (
     </div>
 );
 
-const StatusTracker = ({ application }) => {
+interface Application {
+  type: string;
+  caseId: string;
+  status: string;
+  history: Array<{ name: string; date: string; }>;
+}
+
+const StatusTracker = ({ application }: { application: Application | null }) => {
   if (!application) {
     return (
       <div className="mt-12">
@@ -145,14 +152,14 @@ const StatusTracker = ({ application }) => {
     );
   }
 
-  const historyMap = application.history.reduce((acc, item) => {
+  const historyMap = application.history.reduce<{ [key: string]: string }>((acc, item) => {
       acc[item.name] = item.date;
       return acc;
   }, {});
 
   const currentStatusIndex = allStatuses.findIndex(s => s.name === application.status);
 
-  const getIcon = (index) => {
+  const getIcon = (index: number) => {
     const icons = [<IconFileCheck />, <IconBadgeCheck />, <IconUserCheck />, <IconSend />, <IconLandmark />];
     return icons[index];
   };

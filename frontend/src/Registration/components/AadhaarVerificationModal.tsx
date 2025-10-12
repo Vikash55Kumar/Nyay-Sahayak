@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
+import UserDetailsDisplay from './UserDetailsDisplay.tsx';
+import CasteCertificateVerification from './CasteCertificateVerification.tsx';
 
-// --- SVG Icons (reused for consistency) ---
+// --- SVG Icons ---
 const FingerprintIcon = () => (
     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 10v4"/><path d="M12 18v-2"/><path d="M7 22a2 2 0 0 1-2-2v-1a2 2 0 0 1 2-2"/><path d="M10 22a2 2 0 0 0 2-2v-1a2 2 0 0 0-2-2"/><path d="M14 22a2 2 0 0 0 2-2v-1a2 2 0 0 0-2-2"/><path d="M17 22a2 2 0 0 0 2-2v-1a2 2 0 0 0-2-2"/><path d="M5 18a2 2 0 0 0-2 2"/><path d="M19 18a2 2 0 0 1 2 2"/><path d="M7 14a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2"/><path d="M10 14a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2"/><path d="M14 14a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2"/><path d="M17 14a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2"/><path d="M10 10a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2"/><path d="M14 10a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2"/><path d="M7 5a2 2 0 0 0 2 2h1"/><path d="M17 5a2 2 0 0 1-2 2h-1"/></svg>
 );
@@ -15,14 +17,15 @@ const FingerprintAnimation = () => (
     </div>
 );
 
-// --- Login Modal Component ---
-export default function LoginModal({ isOpen, onClose, onLoginSuccess }) {
-    const [mode, setMode] = useState('aadhaar'); // 'aadhaar', 'otp', or 'fingerprint'
+// --- Aadhaar Verification Modal Component ---
+export default function AadhaarVerificationModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
+    const [mode, setMode] = useState('aadhaar'); // 'aadhaar', 'otp', 'fingerprint', 'details', 'caste'
     const [aadhaarNumber, setAadhaarNumber] = useState('');
 
     if (!isOpen) return null;
 
     const handleGetOtp = () => {
+        // Basic validation for Aadhaar number length
         if (aadhaarNumber.length === 12) {
             setMode('otp');
         } else {
@@ -31,10 +34,27 @@ export default function LoginModal({ isOpen, onClose, onLoginSuccess }) {
     };
 
     const handleVerifyOtp = () => {
-        // On successful OTP verification, call the success handler
-        onLoginSuccess();
+        // For now, just switch to details view
+        setMode('details');
     };
-    
+
+    const handleConfirmDetails = () => {
+        setMode('caste');
+    };
+
+    const handleFinish = () => {
+        onClose();
+        // Maybe reset state here if modal is ever reopened
+        setTimeout(() => {
+            setMode('aadhaar');
+            setAadhaarNumber('');
+        }, 500);
+    };
+
+    const handleCancelDetails = () => {
+        setMode('aadhaar'); // Go back to the start
+    };
+
     const activeTabClasses = 'border-blue-500 text-blue-600';
     const inactiveTabClasses = 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300';
 
@@ -125,7 +145,8 @@ export default function LoginModal({ isOpen, onClose, onLoginSuccess }) {
                     {/* Decorative background elements */}
                     <div className="absolute -top-10 -left-10 w-32 h-32 rounded-full bg-blue-100 opacity-50 -z-500"></div>
                     <div className="absolute -bottom-12 -right-12 w-48 h-48 rounded-full border-8 border-purple-200 opacity-50 -z-500"></div>
-                    <div className="absolute top-1/2 left-1/4 w-20 h-20 rounded-full bg-green-100 opacity-50 -z-500"></div>
+                    <div className="absolute top-1/2 left-1/4 w-20 h-20 -z-500 rounded-full bg-green-100 opacity-50"></div>
+
                     <button 
                         onClick={onClose} 
                         className="absolute top-2 right-2 text-gray-400 hover:text-gray-600 p-2 rounded-full transition-colors"
@@ -136,11 +157,17 @@ export default function LoginModal({ isOpen, onClose, onLoginSuccess }) {
                         </svg>
                     </button>
                     <div className="p-6">
-                        <h2 className="text-2xl font-bold text-center text-gray-800">Login with Aadhaar</h2>
-                        <p className="text-center text-gray-500 mt-2 text-sm">Please verify your identity to login.</p>
+                        <h2 className="text-2xl font-bold text-center text-gray-800">
+                            {mode === 'details' ? 'Confirm Registration' : 
+                             mode === 'caste' ? 'Caste Certificate Verification' : 'Aadhaar Verification'}
+                        </h2>
+                        <p className="text-center text-gray-500 mt-2 text-sm">
+                             {mode === 'details' ? 'Please confirm your details to complete registration.' : 
+                              mode === 'caste' ? 'Please verify your caste certificate to proceed.' : 'Please verify your identity to proceed.'}
+                        </p>
                     </div>
                     
-                    {mode !== 'otp' && (
+                    {mode !== 'otp' && mode !== 'details' && mode !== 'caste' && (
                         <div className="border-b border-gray-200">
                             <div className="flex -mb-px justify-center">
                                 <button 
@@ -154,27 +181,27 @@ export default function LoginModal({ isOpen, onClose, onLoginSuccess }) {
                                     onClick={() => setMode('fingerprint')}
                                     className={`flex items-center justify-center w-1/2 py-4 px-1 text-sm font-medium border-b-2 ${mode === 'fingerprint' ? activeTabClasses : inactiveTabClasses}`}
                                 >
-                                    <FingerprintIcon />
+                                <FingerprintIcon />
                                     <span className="ml-2">Fingerprint Scan</span>
                                 </button>
                             </div>
                         </div>
                     )}
 
-                    <div className="p-6">
+                <div className="p-6">
                         {mode === 'aadhaar' && (
                             <div className="space-y-6">
                                 <div>
-                                    <label htmlFor="aadhaar-login" className="block text-sm font-medium text-gray-700 text-left">
+                                    <label htmlFor="aadhaar" className="block text-sm font-medium text-gray-700 text-left">
                                         Enter your 12-digit Aadhaar Number
                                     </label>
                                     <div className="mt-1">
                                         <input 
                                             type="text" 
-                                            id="aadhaar-login"
+                                            id="aadhaar"
                                             value={aadhaarNumber}
                                             onChange={(e) => setAadhaarNumber(e.target.value.replace(/\D/g, ''))}
-                                            maxLength="12"
+                                            maxLength={12}
                                             className="block w-full px-4 py-3 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
                                             placeholder="XXXX XXXX XXXX"
                                         />
@@ -193,14 +220,14 @@ export default function LoginModal({ isOpen, onClose, onLoginSuccess }) {
                         {mode === 'otp' && (
                             <div className="space-y-6 fade-in">
                                 <div>
-                                    <label htmlFor="otp-login" className="block text-sm font-medium text-gray-700 text-left">
+                                    <label htmlFor="otp" className="block text-sm font-medium text-gray-700 text-left">
                                         Enter OTP sent to your registered mobile number
                                     </label>
                                     <div className="mt-1">
                                         <input 
                                             type="text" 
-                                            id="otp-login"
-                                            maxLength="6"
+                                            id="otp"
+                                            maxLength={6}
                                             className="block w-full px-4 py-3 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
                                             placeholder="XXXXXX"
                                         />
@@ -214,12 +241,23 @@ export default function LoginModal({ isOpen, onClose, onLoginSuccess }) {
                                     className="sheen w-full flex justify-center py-3 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white transition-colors relative overflow-hidden"
                                     style={{ backgroundColor: '#00539C' }}
                                 >
-                                    Verify OTP & Login
+                                    Verify OTP
                                 </button>
                             </div>
                         )}
                         {mode === 'fingerprint' && (
                            <FingerprintAnimation />
+                        )}
+                        {mode === 'details' && (
+                            <UserDetailsDisplay 
+                                onConfirm={handleConfirmDetails}
+                                onCancel={handleCancelDetails}
+                            />
+                        )}
+                        {mode === 'caste' && (
+                            <CasteCertificateVerification
+                                onFinish={handleFinish}
+                            />
                         )}
                     </div>
                 </div>

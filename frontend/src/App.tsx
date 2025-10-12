@@ -1,7 +1,7 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
-import RegistrationPage from './Registration/RegistrationPage';
-import DashboardPage from './BeneficiaryDashboard/DashboardPage';
-import InterCasteMarriageForm from './BeneficiaryDashboard/Inter-Caste_Marriage/InterCasteMarriageApplication';
+import RegistrationPage from './Registration/RegistrationPage.tsx';
+import DashboardPage from './BeneficiaryDashboard/DashboardPage.tsx';
+import InterCasteMarriageForm from './BeneficiaryDashboard/Inter-Caste_Marriage/InterCasteMarriageApplication.tsx';
 import AtrocityReliefForm from './BeneficiaryDashboard/ReliefForAtrocity/AtrocityReliefForm';
 
 const App = () => {

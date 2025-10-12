@@ -1,13 +1,14 @@
 import React, { useState } from 'react';
 import digilockerLogo from '../../assets/digilocker-seeklogo.png';
+import FileUploadComponent from '../../components/FileUploadComponent';
 
 // --- SVG Icons ---
 const DigiLockerIcon = () => (
     <img src={digilockerLogo} alt="DigiLocker" className="h-10" />
 );
 
-const UploadIcon = () => (
-    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+const UploadIcon = ({ className }: { className?: string }) => (
+    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
         <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
         <polyline points="17 8 12 3 7 8" />
         <line x1="12" y1="3" x2="12" y2="15" />
@@ -22,15 +23,13 @@ const CheckCircleIcon = () => (
 
 
 // --- Main Component ---
-export default function CasteCertificateVerification({ onFinish }) {
-    const [verificationMethod, setVerificationMethod] = useState(null); // 'digilocker' or 'manual'
+export default function CasteCertificateVerification({ onFinish }: { onFinish: () => void }) {
+    const [verificationMethod, setVerificationMethod] = useState<string | null>(null); // 'digilocker' or 'manual'
     const [isVerified, setIsVerified] = useState(false);
-    const [fileName, setFileName] = useState('');
+    const [file, setFile] = useState<File | null>(null);
 
-    const handleFileChange = (e) => {
-        if (e.target.files.length > 0) {
-            setFileName(e.target.files[0].name);
-        }
+    const handleFileSelect = (selectedFile: File) => {
+        setFile(selectedFile);
     };
 
     const handleVerification = () => {
@@ -93,28 +92,13 @@ export default function CasteCertificateVerification({ onFinish }) {
             ) : (
                 // --- Manual Upload Flow ---
                 <div className="space-y-4">
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                            Upload your Caste Certificate (PDF, JPG, PNG)
-                        </label>
-                        <div className="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-md">
-                            <div className="space-y-1 text-center">
-                                <UploadIcon className="mx-auto h-12 w-12 text-gray-400" />
-                                <div className="flex text-sm text-gray-600">
-                                    <label htmlFor="file-upload" className="relative cursor-pointer bg-white rounded-md font-medium text-blue-600 hover:text-blue-500 focus-within:outline-none">
-                                        <span>Upload a file</span>
-                                        <input id="file-upload" name="file-upload" type="file" className="sr-only" onChange={handleFileChange} />
-                                    </label>
-                                    <p className="pl-1">or drag and drop</p>
-                                </div>
-                                <p className="text-xs text-gray-500">Max. 5MB</p>
-                                {fileName && <p className="text-sm text-green-600 mt-2">{fileName}</p>}
-                            </div>
-                        </div>
-                    </div>
+                    <FileUploadComponent 
+                        onFileSelect={handleFileSelect}
+                        label="Upload your Caste Certificate (PDF, JPG, PNG)"
+                    />
                      <button
                         onClick={handleVerification}
-                        disabled={!fileName}
+                        disabled={!file}
                         className="sheen w-full flex justify-center py-3 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white transition-colors relative overflow-hidden disabled:bg-gray-400 disabled:cursor-not-allowed"
                         style={{ backgroundColor: '#00539C' }}
                     >

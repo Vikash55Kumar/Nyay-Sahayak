@@ -7,7 +7,7 @@ const CheckCircleIcon = () => (
     </svg>
 );
 
-export default function SuccessModal({ isOpen, onClose }) {
+export default function SuccessModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
     if (!isOpen) return null;
 
     return (

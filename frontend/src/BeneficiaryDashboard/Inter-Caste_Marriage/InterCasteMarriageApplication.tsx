@@ -3,7 +3,7 @@ import { Link } from "react-router-dom"; // Import Link
 
 // Import the new FileUploadComponent
 import FileUploadComponent from "../../components/FileUploadComponent"; // Adjust path as necessary
-import SuccessModal from "/src/components/SuccessModal";
+import SuccessModal from "../../components/SuccessModal";
 
 // --- SVG Icons ---
 const FileTextIcon = () => (
@@ -98,8 +98,8 @@ const UploadActionIcon = () => (
 );
 
 // --- Layout Components (assuming these are in Layout directory) ---
-import Navbar from "/src/Layout/Navbar";
-import Footer from "/src/Layout/Footer";
+import Navbar from "../../Layout/Navbar";
+import Footer from "../../Layout/Footer";
 import indiaBackground from "/src/assets/in.svg"; // Assuming this path is correct
 
 // --- Background India Map SVG ---
@@ -139,18 +139,22 @@ export default function InterCasteMarriageForm() {
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   // To store file objects that have been selected, for display purposes
-  const [selectedFiles, setSelectedFiles] = useState({
+  const [selectedFiles, setSelectedFiles] = useState<{
+    partnerOneCasteCert: File | null;
+    partnerTwoCasteCert: File | null;
+    marriageCertPdf: File | null;
+  }>({
     partnerOneCasteCert: null,
     partnerTwoCasteCert: null,
     marriageCertPdf: null,
   });
 
-  const handleFileSelect = (file, fieldName) => {
+  const handleFileSelect = (file: File, fieldName: keyof typeof selectedFiles) => {
     setFormData((prev) => ({ ...prev, [fieldName]: file }));
     setSelectedFiles((prev) => ({ ...prev, [fieldName]: file }));
   };
 
-  const removeSelectedFile = (fieldName) => {
+  const removeSelectedFile = (fieldName: keyof typeof selectedFiles) => {
     setFormData((prev) => ({ ...prev, [fieldName]: null }));
     setSelectedFiles((prev) => ({ ...prev, [fieldName]: null }));
   };
@@ -161,7 +165,7 @@ export default function InterCasteMarriageForm() {
     formData.partnerTwoCasteCert &&
     formData.marriageCertPdf;
 
-  const handleSubmit = (e) => {
+  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!isFormValid) {
       alert("Please fill all fields and upload all required documents.");
