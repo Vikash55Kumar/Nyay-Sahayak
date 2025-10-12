@@ -1,0 +1,63 @@
+/* Subtle hero background styling */
+.hero-background {
+	position: absolute;
+	top: 200%;
+	left: 50%;
+	transform: translate(-50%, -50%);
+	pointer-events: none;
+	z-index: 0;
+	width: min(60vw, 600px);
+	height: auto;
+	opacity: 0.15;
+}
+
+.hero-background svg {
+	width: 100%;
+	height: auto;
+	filter: drop-shadow(0 8px 16px rgba(0, 83, 156, 0.1));
+}
+
+@media (min-width: 1024px) {
+	.hero-background {
+		opacity: 0.2;
+		width: min(70vw, 700px);
+	}
+}
+
+@media (max-width: 640px) {
+	.hero-background {
+		opacity: 0.12;
+		width: 80vw;
+	}
+}
+
+/* Sheen effect for buttons */
+.sheen {
+  position: relative;
+  overflow: hidden;
+}
+
+.sheen::after {
+  content: '';
+  position: absolute;
+  top: -50%;
+  right: -50%;
+  bottom: -50%;
+  left: -50%;
+  background: linear-gradient(to bottom, rgba(229, 172, 142, 0), rgba(255,255,255,0.5) 50%, rgba(229, 172, 142, 0));
+  transform: rotateZ(60deg) translate(-5em, 7.5em);
+  opacity: 0;
+  transition: opacity 0.3s ease-in-out;
+}
+
+.sheen:hover::after,
+.sheen:focus::after {
+  opacity: 1;
+  animation: sheen 1s forwards;
+}
+
+@keyframes sheen {
+  100% {
+    transform: rotateZ(60deg) translate(1em, -9em);
+  }
+}
