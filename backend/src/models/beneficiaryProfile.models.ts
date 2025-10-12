@@ -1,51 +1,8 @@
-import mongoose, { Document, Schema } from 'mongoose';
-
-// Address interface
-export interface Address {
-  careOf: string;
-  street: string;
-  village: string;
-  postOffice: string;
-  district: string;
-  state: string;
-  pincode: string;
-  country: string;
-}
-
-// Aadhaar data interface
-export interface AadhaarData {
-  uid: string; // Masked for security
-  fullName: string;
-  dob: Date;
-  gender: 'Male' | 'Female' | 'Other';
-  address: Address;
-  photoUrl?: string;
-}
-
-// Caste details interface
-export interface CasteDetails {
-  caste: string;
-  category: 'SC' | 'ST';
-  certificateNumber?: string;
-  issuingAuthority?: string;
-  issueDate?: Date;
-  verificationStatus: 'PENDING' | 'VERIFIED' | 'REJECTED';
-}
-
-// Beneficiary Profile interface
-export interface BeneficiaryProfile extends Document {
-  _id: mongoose.Types.ObjectId;
-  userId: mongoose.Types.ObjectId; // Reference to Users collection
-  aadhaarData: AadhaarData;
-  casteDetails: CasteDetails;
-  applications: mongoose.Types.ObjectId[]; // Array of application IDs
-  profileStatus: 'INCOMPLETE' | 'SUBMITTED' | 'VERIFIED' | 'REJECTED';
-  createdAt: Date;
-  updatedAt: Date;
-}
+import mongoose, { Schema } from 'mongoose';
+import { IBeneficiaryProfile, IAddress, IAadhaarData, ICasteDetails } from '../types/beneficiary.types';
 
 // Address Schema
-const AddressSchema = new Schema<Address>({
+const AddressSchema = new Schema<IAddress>({
   careOf: { type: String, required: true },
   street: { type: String, required: true },
   village: { type: String, required: true },
@@ -57,7 +14,7 @@ const AddressSchema = new Schema<Address>({
 }, { _id: false });
 
 // Aadhaar Data Schema
-const AadhaarDataSchema = new Schema<AadhaarData>({
+const AadhaarDataSchema = new Schema<IAadhaarData>({
   uid: { type: String, required: true, match: /^XXXX-XXXX-\d{4}$/ }, // Masked format
   fullName: { type: String, required: true, index: true },
   dob: { type: Date, required: true },
@@ -67,22 +24,21 @@ const AadhaarDataSchema = new Schema<AadhaarData>({
 }, { _id: false });
 
 // Caste Details Schema
-const CasteDetailsSchema = new Schema<CasteDetails>({
+const CasteDetailsSchema = new Schema<ICasteDetails>({
   caste: { type: String, required: true, index: true },
-  category: { type: String, enum: ['SC', 'ST'], required: true, index: true },
+  category: { type: String, enum: ['SC', 'ST'], required: true },
   certificateNumber: { type: String, sparse: true },
   issuingAuthority: { type: String },
   issueDate: { type: Date },
   verificationStatus: {
     type: String,
     enum: ['PENDING', 'VERIFIED', 'REJECTED'],
-    default: 'PENDING',
-    index: true
+    default: 'PENDING'
   }
 }, { _id: false });
 
 // Beneficiary Profile Schema
-const BeneficiaryProfileSchema = new Schema<BeneficiaryProfile>({
+const BeneficiaryProfileSchema = new Schema<IBeneficiaryProfile>({
   userId: {
     type: Schema.Types.ObjectId,
     ref: 'User',
@@ -115,4 +71,4 @@ const BeneficiaryProfileSchema = new Schema<BeneficiaryProfile>({
 // Indexes for performance
 BeneficiaryProfileSchema.index({ profileStatus: 1, createdAt: -1 });
 BeneficiaryProfileSchema.index({ 'casteDetails.category': 1, 'casteDetails.verificationStatus': 1 });
-export const BeneficiaryProfile = mongoose.model<BeneficiaryProfile>('BeneficiaryProfile', BeneficiaryProfileSchema);
+export const BeneficiaryProfile = mongoose.model<IBeneficiaryProfile>('BeneficiaryProfile', BeneficiaryProfileSchema);
