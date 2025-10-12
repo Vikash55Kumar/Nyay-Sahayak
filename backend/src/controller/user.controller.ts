@@ -74,7 +74,7 @@ const initiateRegistration = asyncHandler(async (req: Request, res: Response): P
         if (aadhaarValidation.message === "Aadhaar number not found") {
             throw new ApiError(404, "Aadhaar number not found in government database.");
         } else if (aadhaarValidation.message === "Mobile number does not match with Aadhaar records") {
-            throw new ApiError(400, "Mobile number is not linked with this Aadhaar number. Please use the registered mobile number or update your Aadhaar profile.");
+            throw new ApiError(400, "Mobile number is not linked with this Aadhaar number.");
         }
         throw new ApiError(400, aadhaarValidation.message);
     }
@@ -86,11 +86,7 @@ const initiateRegistration = asyncHandler(async (req: Request, res: Response): P
     await NotificationService.sendOTP(mobileNumber, otp, 'registration');
 
     res.status(200).json(
-        new ApiResponse(200, {
-            message: "OTP sent successfully",
-            otpSentTo: mobileNumber,
-            expiresIn: "10 minutes",
-        }, "OTP sent to registered mobile number")
+        new ApiResponse(200, {}, "Aadhar OTP sent to registered mobile number")
     );
 });
 
@@ -158,13 +154,6 @@ const verifyOTPAndGetAadhaarData = asyncHandler(async (req: Request, res: Respon
                 },
                 photoUrl: aadhaarData.photo
             },
-            registrationStatus: 'AADHAAR_VERIFIED',
-            nextStep: "CASTE_VERIFICATION",
-            progress: {
-                currentStep: 2,
-                totalSteps: 3,
-                stepName: "Caste Certificate Verification"
-            }
         }, "Aadhaar verification successful. Please complete caste verification to proceed.")
     );
 });
@@ -534,13 +523,7 @@ const sendLoginOTP = asyncHandler(async (req: Request, res: Response): Promise<v
     await NotificationService.sendOTP(mobileNumber, otp, 'login');
 
     res.status(200).json(
-        new ApiResponse(200, {
-            message: "OTP sent successfully",
-            otpSentTo: mobileNumber,
-            expiresIn: "10 minutes",
-            // For demo purposes
-            demoOTP: process.env.NODE_ENV === 'development' ? otp : undefined
-        }, "Login OTP sent")
+        new ApiResponse(200, {}, "Login OTP sent successfully")
     );
 });
 
