@@ -6,14 +6,26 @@ import applicationRouter from "./router/application.router";
 import path from "path";
 const app = express();
 
-// CORS middleware
-const frontendUrl = process.env.FRONTEND_URL
-const allowedOrigins = frontendUrl ? frontendUrl.split(',').map(origin => origin.trim()) : [];
+const frontendUrlRaw = process.env.FRONTEND_URL || '';
+const frontendUrlClean = frontendUrlRaw.replace(/['"]+/g, '').trim();
+const allowedOrigins = frontendUrlClean
+  ? frontendUrlClean.split(/\s*(?:,|\|\||;|\|)\s*/).map(o => o.trim()).filter(Boolean)
+  : [];
 
-app.use(cors({
-  origin: 'http://localhost:5173',
-  credentials: true
-}));
+if (allowedOrigins.length === 0) {
+  app.use(cors({ origin: true, credentials: true }));
+} else {
+  app.use(cors({
+    origin: (origin, callback) => {
+      // allow requests with no origin (like mobile apps or curl)
+      if (!origin) return callback(null, true);
+      if (allowedOrigins.includes(origin)) return callback(null, true);
+      // otherwise reject - browser will block the request
+      return callback(new Error('CORS policy: Origin not allowed'), false);
+    },
+    credentials: true
+  }));
+}
 
 // Add Json body parser middleware
 app.use(express.json());
