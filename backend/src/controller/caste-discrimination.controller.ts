@@ -1,5 +1,4 @@
 import { Request, Response } from 'express';
-import jwt from 'jsonwebtoken';
 import { BeneficiaryProfile } from '../models/beneficiaryProfile.models';
 import { MockDataService } from '../services/mockData.service';
 import ApiResponse from '../utility/ApiResponse';
@@ -7,30 +6,25 @@ import { ApiError } from '../utility/ApiError';
 import { asyncHandler } from '../utility/asyncHandler';
 import { CasteDiscriminationApplication, Application } from '../models/unified-application.models';
 import { AuditService } from '../services/audit.service';
-
+import { User } from '../models/user.models';
+interface AuthRequest extends Request {
+    user?: {
+        id: string;
+        aadhaarNumber: string;
+        role: string;
+    };
+}
 // Submit Atrocity Relief Application
-export const submitCasteDiscriminationApplication = asyncHandler(async (req: Request, res: Response) => {
-  const authHeader = req.headers.authorization;
-  
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    throw new ApiError(401, "Authorization token required");
+export const submitCasteDiscriminationApplication = asyncHandler(async (req: AuthRequest, res: Response) => {
+  const userId = req.user?.id;
+  if (!userId) {
+    throw new ApiError(401, "User not authenticated.");
   }
 
-  const token = authHeader.substring(7);
-  let decoded: any;
-  
-  try {
-    decoded = jwt.verify(token, process.env.JWT_SECRET!);
-  } catch (error) {
-    throw new ApiError(401, "Invalid or expired token");
+  const authUser = await User.findById(userId);
+  if (!authUser) {
+    throw new ApiError(404, "User not found.");
   }
-
-  if (!decoded || decoded.role !== 'session') {
-    throw new ApiError(401, "Valid session token required");
-  }
-
-  const { beneficiaryId } = decoded;
-  
   const {
     firNumber,
     policeStation,
@@ -48,109 +42,76 @@ export const submitCasteDiscriminationApplication = asyncHandler(async (req: Req
   }
 
   // Verify beneficiary exists
-  const beneficiary = await BeneficiaryProfile.findOne({ userId: beneficiaryId })
+  const beneficiary = await BeneficiaryProfile.findOne({ userId })
     .populate('userId', 'aadhaarNumber mobileNumber');
-  
+
   if (!beneficiary) {
     throw new ApiError(404, "Beneficiary profile not found");
   }
 
-  const user = beneficiary.userId as any;
+  const beneficiaryId = beneficiary._id;
+  const beneficiaryUser = beneficiary.userId as any;
 
-  // STEP 1: Verify FIR in CCTNS Database
-  console.log('🔍 STEP 1: Verifying FIR in CCTNS...');
-  const firVerification = MockDataService.verifyFIRInCCTNS(firNumber, policeStation, district);
-  
-  if (!firVerification.success || !firVerification.data) {
-    throw new ApiError(400, `FIR Verification Failed: ${firVerification.message}`);
-  }
+  // Do NOT auto-verify or auto-approve. Only save submitted application for authority review.
+  // Only basic FIR details are saved, verificationStatus is 'PENDING'.
+  // Generate application id similar to other flows
+  const year = new Date().getFullYear();
+  const random = Math.floor(Math.random() * 900000) + 100000;
+  const applicationId = `ATR_${year}_${random}`;
 
-  // STEP 2: Verify beneficiary is the victim in FIR
-  console.log('🔍 STEP 2: Verifying beneficiary as victim...');
-  const victimVerification = MockDataService.verifyVictimInFIR(firNumber, user.aadhaarNumber);
-  
-  if (!victimVerification.success || !victimVerification.isVictim) {
-    throw new ApiError(400, `Victim Verification Failed: ${victimVerification.message}`);
-  }
-
-  // STEP 3: Get case status and compensation eligibility from eCourt
-  console.log('🔍 STEP 3: Checking eCourt case status...');
-  const caseStatus = MockDataService.getCaseStatusFromeCourt(firNumber);
-  const compensationDetails = MockDataService.getCompensationDetails(firNumber);
-
-  // STEP 4: Determine application status based on verification
-  let applicationStatus: 'DRAFT' | 'SUBMITTED' | 'UNDER_REVIEW' | 'APPROVED' | 'REJECTED' = 'SUBMITTED';
-  let approvedAmount: number | undefined;
-  
-  if (compensationDetails.success && compensationDetails.eligible) {
-    // Auto-approve if all verifications pass and compensation is due
-    applicationStatus = 'APPROVED';
-    approvedAmount = compensationDetails.amount;
-  }
-
-  // Create atrocity relief application with verified data
   const application = new CasteDiscriminationApplication({
-    beneficiaryId,
+    applicationId,
+    beneficiaryId: beneficiaryId,
     applicationType: 'ATROCITY_RELIEF',
     firDetails: {
-      firNumber: firVerification.data.firNumber,
-      policeStation: firVerification.data.policeStation,
-      district: firVerification.data.district,
-      dateOfIncident: new Date(firVerification.data.dateOfIncident),
-      incidentDescription: incidentDescription || firVerification.data.incidentType,
-      sectionsApplied: firVerification.data.sectionsApplied,
-      verificationStatus: 'VERIFIED' // Auto-verified through CCTNS
+      firNumber,
+      policeStation,
+      district,
+      dateOfIncident: new Date(dateOfIncident),
+      incidentDescription,
+      sectionsApplied,
+      verificationStatus: 'PENDING' // Authority will verify
     },
     documentsUploaded: supportingDocuments ? supportingDocuments.map((doc: any) => ({
       documentType: doc.type || 'Supporting Document',
       fileName: doc.fileName || 'document.pdf',
-      fileUrl: doc.url || doc.fileUrl,
+      // fallback fileUrl if client only sends filename metadata
+      fileUrl: doc.url || doc.fileUrl || `/meta/${encodeURIComponent(String(doc.fileName || 'document.pdf'))}`,
       uploadedAt: new Date(),
       verificationStatus: 'PENDING'
     })) : [],
-    applicationStatus,
-    approvedAmount,
+    applicationStatus: 'SUBMITTED',
     submittedAt: new Date(),
-    reviewedAt: applicationStatus === 'APPROVED' ? new Date() : undefined,
-    applicationReason: applicationReason || `Compensation for ${firVerification.data.incidentType}`
+    applicationReason: applicationReason || 'Compensation for FIR incident'
   });
 
   await application.save();
 
-  // Log comprehensive audit with verification details
+  // Log audit for submission only, no verification
   await AuditService.logApplicationSubmission(
-    beneficiaryId,
+    beneficiaryUser._id,
     application._id,
     req,
     {
       type: 'ATROCITY_RELIEF',
       applicationNumber: application.applicationId,
       firNumber,
-      firVerified: firVerification.success,
-      victimVerified: victimVerification.isVictim,
-      caseStatus: caseStatus.success ? caseStatus.data?.caseStage : 'Not Found',
-      compensationEligible: compensationDetails.eligible,
-      autoApproved: applicationStatus === 'APPROVED',
-      approvedAmount,
+      firVerified: false,
+      victimVerified: false,
+      caseStatus: 'PENDING',
+      compensationEligible: false,
+      autoApproved: false,
+      approvedAmount: undefined,
       documentsCount: supportingDocuments?.length || 0,
-      verificationSource: 'CCTNS_AUTO'
+      verificationSource: 'PENDING_AUTHORITY'
     }
   );
 
-  // Enhanced notification with verification status
+  // Notification: inform user of submission only
   try {
-    let notificationMessage = `आपका अत्याचार राहत आवेदन ${application.applicationId} सफलतापूर्वक जमा हुआ है।`;
-    
-    if (applicationStatus === 'APPROVED') {
-      notificationMessage += ` FIR सत्यापित। ₹${approvedAmount} की राशि स्वीकृत।`;
-    } else {
-      notificationMessage += ` FIR: ${firNumber}। समीक्षाधीन।`;
-    }
-    
-    notificationMessage += ` स्थिति जांचने के लिए पोर्टल देखें।`;
-
+    let notificationMessage = `आपका अत्याचार राहत आवेदन ${application.applicationId} सफलतापूर्वक जमा हुआ है। FIR: ${firNumber}। आवेदन की समीक्षा प्राधिकरण द्वारा की जाएगी। स्थिति जांचने के लिए पोर्टल देखें।`;
     await (require('../services/notification.service').NotificationService as any).sendSMSImmediate(
-      user.mobileNumber,
+      beneficiaryUser.mobileNumber,
       notificationMessage
     );
   } catch (error) {
@@ -161,26 +122,19 @@ export const submitCasteDiscriminationApplication = asyncHandler(async (req: Req
     new ApiResponse(201, {
       applicationId: application.applicationId,
       firNumber,
-      status: applicationStatus,
+      status: 'SUBMITTED',
       verificationDetails: {
-        firVerified: true,
-        victimVerified: true,
-        caseFound: caseStatus.success,
-        compensationEligible: compensationDetails.eligible,
-        compensationStage: compensationDetails.stage,
-        autoProcessed: applicationStatus === 'APPROVED'
+        firVerified: false,
+        victimVerified: false,
+        caseFound: false,
+        compensationEligible: false,
+        compensationStage: null,
+        autoProcessed: false
       },
-      approvedAmount: applicationStatus === 'APPROVED' ? approvedAmount : undefined,
-      caseDetails: caseStatus.success ? {
-        caseNumber: caseStatus.data?.caseNumber,
-        courtName: caseStatus.data?.courtName,
-        caseStage: caseStatus.data?.caseStage,
-        nextHearing: caseStatus.data?.nextHearingDate
-      } : null,
-      message: applicationStatus === 'APPROVED' ? 
-        'Application auto-approved after successful verification' : 
-        'Application submitted successfully with verified FIR'
-    }, "Smart verification completed successfully")
+      approvedAmount: undefined,
+      caseDetails: null,
+      message: 'Application submitted successfully. Authority will verify and process your application.'
+    }, "Application submitted. Awaiting authority verification.")
   );
 });
 

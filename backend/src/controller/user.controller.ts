@@ -46,7 +46,7 @@ interface AuthRequest extends Request {
 // Step 1: Initiate Registration - Send OTP
 const initiateRegistration = asyncHandler(async (req: Request, res: Response): Promise<void> => {
     const { aadhaarNumber, mobileNumber }: InitiateRegistrationInput = req.body;
-
+    console.log("Initiating registration with data:", { aadhaarNumber, mobileNumber });
     // Validation
     if (!aadhaarNumber || !mobileNumber) {
         throw new ApiError(400, "Aadhaar number and mobile number are required.");
@@ -241,7 +241,7 @@ const fetchCasteFromDigiLocker = asyncHandler(async (req: Request, res: Response
 
 // Step 4: Complete Final Registration (Create User and Profile with Caste Verification)
 const completeRegistration = asyncHandler(async (req: Request, res: Response): Promise<void> => {
-    const { sessionToken, aadhaarNumber, mobileNumber, aadhaarData, casteDetails, documentUrl } = req.body;
+    const { sessionToken, aadhaarNumber, mobileNumber, aadhaarData, personalDetails, casteDetails, documentUrl, bankDetails } = req.body;
 
     if (!sessionToken || !aadhaarNumber || !mobileNumber || !aadhaarData) {
         throw new ApiError(400, "Session token, Aadhaar number, mobile number, and Aadhaar data are required.");
@@ -273,6 +273,14 @@ const completeRegistration = asyncHandler(async (req: Request, res: Response): P
     const existingUser = await User.findOne({ aadhaarNumber });
     if (existingUser) {
         throw new ApiError(409, "User with this Aadhaar number already exists.");
+    }
+
+    // If bankDetails details are provided, perform basic validation
+    if (bankDetails) {
+        // Expecting bankDetails to contain accountHolder, accountNumber, confirmAccountNumber, bankDetailsName, branchName, ifsc
+        if (bankDetails.accountNumber && bankDetails.confirmAccountNumber && bankDetails.accountNumber !== bankDetails.confirmAccountNumber) {
+            throw new ApiError(400, "Bank account numbers do not match. Please verify account number and confirmation.");
+        }
     }
 
     let user: any;
@@ -311,7 +319,7 @@ const completeRegistration = asyncHandler(async (req: Request, res: Response): P
         await user.save();
         console.log('✅ User created successfully:', user._id, '| Status:', accountStatus);
 
-        // Create Beneficiary Profile with appropriate status
+        // Create Beneficiary Profile with appropriate status. Prefer manual personalDetails when provided.
         beneficiaryProfile = new BeneficiaryProfile({
             userId: user._id,
             aadhaarData: {
@@ -319,6 +327,9 @@ const completeRegistration = asyncHandler(async (req: Request, res: Response): P
                 fullName: aadhaarData.fullName,
                 dob: MockDataService.parseDate(aadhaarData.dob),
                 gender: aadhaarData.gender,
+                fatherName: (personalDetails && personalDetails.fatherName) ? personalDetails.fatherName : aadhaarData.fatherName,
+                motherName: (personalDetails && personalDetails.motherName) ? personalDetails.motherName : aadhaarData.motherName,
+                email: (personalDetails && personalDetails.email) ? personalDetails.email : aadhaarData.email,
                 address: aadhaarData.address,
                 photoUrl: aadhaarData.photoUrl
             },
@@ -330,7 +341,13 @@ const completeRegistration = asyncHandler(async (req: Request, res: Response): P
                 issueDate: finalCasteDetails.issueDate,
                 verificationStatus: finalCasteDetails.verificationStatus
             },
-            // Profile status based on verification method
+            bankDetails: bankDetails ? {
+                accountHolder: bankDetails.accountHolder,
+                bankName: bankDetails.bankName,
+                branchName: bankDetails.branchName,
+                accountNumber: bankDetails.accountNumber,
+                ifsc: bankDetails.ifsc
+            } : undefined,
             profileStatus: isAutoVerified ? 'VERIFIED' : 'SUBMITTED' // SUBMITTED = pending authority verification
         });
 
@@ -405,6 +422,7 @@ const completeRegistration = asyncHandler(async (req: Request, res: Response): P
                 fullName: beneficiaryProfile.aadhaarData.fullName,
                 address: beneficiaryProfile.aadhaarData.address,
                 casteDetails: beneficiaryProfile.casteDetails,
+                bankDetails: beneficiaryProfile.bankDetails || null,
                 profileStatus: beneficiaryProfile.profileStatus
             },
             token,
@@ -591,8 +609,14 @@ const getUserProfile = asyncHandler(async (req: AuthRequest, res: Response): Pro
             profile: profile ? {
                 id: profile._id,
                 fullName: profile.aadhaarData.fullName,
+                fatherName: profile.aadhaarData.fatherName,
+                motherName: profile.aadhaarData.motherName,
+                email: profile.aadhaarData.email,
+                dob: profile.aadhaarData.dob,
+                gender: profile.aadhaarData.gender,
                 address: profile.aadhaarData.address,
                 casteDetails: profile.casteDetails,
+                bankDetails: profile.bankDetails,
                 profileStatus: profile.profileStatus,
                 applications: profile.applications,
                 createdAt: profile.createdAt,

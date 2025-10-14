@@ -13,7 +13,7 @@ const router = express.Router();
 
 // Application Management Routes
 router.post('/intercaste-marriage', authenticate, submitIntercasteMarriageApplication);
-router.post('/atrocity-relief', submitCasteDiscriminationApplication);
+router.post('/atrocity-relief', authenticate, submitCasteDiscriminationApplication);
 router.get('/status/:applicationId', getApplicationStatus);
 router.get('/timeline/:applicationId', getApplicationTimeline); // Enhanced tracking
 router.get('/my-applications', authenticate, getBeneficiaryApplications);
