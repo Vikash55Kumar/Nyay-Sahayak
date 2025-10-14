@@ -2,10 +2,10 @@ export class MockDataService {
   
   // Mock Aadhaar database - simple data storage
   static aadhaarDatabase: { [key: string]: any } = {
-    "123456789012": {
-      name: "Geeta Devi",
-      mobile: "9135842253",
-      dateOfBirth: "22-07-1998",
+    "973090065374": {
+      name: "Vikash Kumar",
+      mobile: "8404858563",
+      dateOfBirth: "22-07-2005",
       gender: "F",
       address: {
         careOf: "D/O Ramesh Lal",
@@ -81,24 +81,24 @@ export class MockDataService {
 
   // Mock Caste Certificate database - simple data storage
   static casteDatabase: { [key: string]: any } = {
-    "123456789012": {
-      applicantName: "Geeta Devi",
-      fatherName: "Ramesh Lal",
+    "973090065374": {
+      applicantName: "Vikash Kumar",
+      fatherName: "Ram Lal",
       caste: "Bhil Meena",
       category: "ST",
       certificateNumber: "RSC/2023/SJE/184592",
-      issueDate: "2023-03-15",
+      issueDate: "2025-09-15",
       issuer: "Government of Rajasthan, Revenue Department"
     },
-    // "987654321098": {
-    //   applicantName: "Ravi Kumar",
-    //   fatherName: "Suresh Kumar",
-    //   caste: "Bairwa",
-    //   category: "SC",
-    //   certificateNumber: "RSC/2022/SJE/156743",
-    //   issueDate: "2022-11-20",
-    //   issuer: "Government of Rajasthan, Revenue Department"
-    // },
+    "987654321098": {
+      applicantName: "Ravi Kumar",
+      fatherName: "Suresh Kumar",
+      caste: "Bairwa",
+      category: "SC",
+      certificateNumber: "RSC/2022/SJE/156743",
+      issueDate: "2022-11-20",
+      issuer: "Government of Rajasthan, Revenue Department"
+    },
     "456789012345": {
       applicantName: "Priya Sharma",
       fatherName: "Rajesh Sharma",
@@ -135,8 +135,8 @@ export class MockDataService {
       marriageDate: "2024-05-20",
       registrationAuthority: "Municipal Corporation Jaipur",
       husband: {
-        name: "Ravi Kumar",
-        aadhaarNumber: "987654321098",
+        name: "Vikash Kumar",
+        aadhaarNumber: "973090065374",
         category: "SC"
       },
       wife: {

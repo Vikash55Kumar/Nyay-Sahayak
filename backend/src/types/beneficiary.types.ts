@@ -9,7 +9,6 @@ export interface IAddress {
   district: string;
   state: string;
   pincode: string;
-  country: string;
 }
 
 // Aadhaar data interface
@@ -18,6 +17,12 @@ export interface IAadhaarData {
   fullName: string;
   dob: Date;
   gender: 'Male' | 'Female' | 'Other';
+  fatherName?: string;
+  motherName?: string;
+  email?: string;
+  district: string;
+  state: string;
+  pincode: string;
   address: IAddress;
   photoUrl?: string;
 }
@@ -38,8 +43,18 @@ export interface IBeneficiaryProfile extends Document {
   userId: mongoose.Types.ObjectId; // Reference to Users collection
   aadhaarData: IAadhaarData;
   casteDetails: ICasteDetails;
+  bankDetails?: BankDetails;
   applications: mongoose.Types.ObjectId[]; // Array of application IDs
   profileStatus: 'INCOMPLETE' | 'SUBMITTED' | 'VERIFIED' | 'REJECTED';
   createdAt: Date;
   updatedAt: Date;
+}
+
+// Bank Details interface
+export interface BankDetails {
+  accountHolder: string;
+  bankName: string;
+  branchName: string;
+  accountNumber: string;
+  ifsc: string;
 }

@@ -1,5 +1,5 @@
 import mongoose, { Schema } from 'mongoose';
-import { IBeneficiaryProfile, IAddress, IAadhaarData, ICasteDetails } from '../types/beneficiary.types';
+import { IBeneficiaryProfile, IAddress, IAadhaarData, ICasteDetails, BankDetails } from '../types/beneficiary.types';
 
 // Address Schema
 const AddressSchema = new Schema<IAddress>({
@@ -9,8 +9,7 @@ const AddressSchema = new Schema<IAddress>({
   postOffice: {type: String, required: true},
   district: { type: String, required: true, index: true },
   state: { type: String, required: true, index: true },
-  pincode: { type: String, required: true, match: /^\d{6}$/ },
-  country: {type: String, required: true}
+  pincode: { type: String, required: true, match: /^\d{6}$/ }
 }, { _id: false });
 
 // Aadhaar Data Schema
@@ -19,6 +18,9 @@ const AadhaarDataSchema = new Schema<IAadhaarData>({
   fullName: { type: String, required: true, index: true },
   dob: { type: Date, required: true },
   gender: { type: String, enum: ['Male', 'Female', 'Other'], required: true },
+  fatherName: { type: String },
+  motherName: { type: String },
+  email: { type: String, match: /^[^\s@]+@[^\s@]+\.[^\s@]+$/ },
   address: { type: AddressSchema, required: true },
   photoUrl: { type: String }
 }, { _id: false });
@@ -37,6 +39,14 @@ const CasteDetailsSchema = new Schema<ICasteDetails>({
   }
 }, { _id: false });
 
+const bankDetailsSchema = new Schema<BankDetails>({
+  accountHolder: { type: String },
+  bankName: { type: String },
+  branchName: { type: String },
+  accountNumber: { type: String },
+  ifsc: { type: String }
+}, { _id: false });
+
 // Beneficiary Profile Schema
 const BeneficiaryProfileSchema = new Schema<IBeneficiaryProfile>({
   userId: {
@@ -52,6 +62,10 @@ const BeneficiaryProfileSchema = new Schema<IBeneficiaryProfile>({
   },
   casteDetails: {
     type: CasteDetailsSchema,
+    required: true
+  },
+  bankDetails: {
+    type: bankDetailsSchema,
     required: true
   },
   applications: [{
