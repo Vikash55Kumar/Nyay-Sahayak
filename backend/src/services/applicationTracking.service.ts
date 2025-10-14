@@ -242,6 +242,7 @@ export class ApplicationTrackingService {
     const timeline = [
       {
         stage: 'Application Submitted',
+
         status: 'COMPLETED',
         date: application.submittedAt || application.createdAt,
         description: 'Application submitted by beneficiary'
@@ -295,6 +296,8 @@ export class ApplicationTrackingService {
     return {
       applicationId,
       currentStatus: application.applicationStatus,
+      applicationType: application.applicationType,
+      applicationReason: application.applicationReason,
       timeline,
       beneficiaryName: (application.beneficiaryId as any)?.aadhaarData?.fullName,
       assignedOfficer: application.assignedOfficer ? {

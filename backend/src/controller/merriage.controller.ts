@@ -19,7 +19,7 @@ interface AuthRequest extends Request {
 
 // Submit Intercaste Marriage Application
 export const submitIntercasteMarriageApplication = asyncHandler(async (req: AuthRequest, res: Response) => {
-  // Get authenticated user
+
   const userId = req.user?.id;
   if (!userId) {
     throw new ApiError(401, "User not authenticated.");
@@ -35,9 +35,19 @@ export const submitIntercasteMarriageApplication = asyncHandler(async (req: Auth
     spouseName,
     spouseCategory,
     spouseAadhaarNumber,
-    supportingDocuments,
+    supportingDocuments: supportingDocumentsRaw,
     applicationReason
-  } = req.body;
+  } = req.body || {};
+
+  // supportingDocuments should be provided as JSON in the request body.
+  let supportingDocuments = [] as any[];
+  if (supportingDocumentsRaw) {
+    try {
+      supportingDocuments = typeof supportingDocumentsRaw === 'string' ? JSON.parse(supportingDocumentsRaw) : supportingDocumentsRaw;
+    } catch (err) {
+      supportingDocuments = supportingDocumentsRaw;
+    }
+  }
 
   // Validate required fields
   if (!marriageRegistrationId || !spouseName || !spouseCategory || !spouseAadhaarNumber) {
@@ -102,7 +112,8 @@ export const submitIntercasteMarriageApplication = asyncHandler(async (req: Auth
     documentsUploaded: supportingDocuments ? supportingDocuments.map((doc: any) => ({
       documentType: doc.type || 'Supporting Document',
       fileName: doc.fileName || 'document.pdf',
-      fileUrl: doc.url || doc.fileUrl,
+      // Provide a fallback fileUrl when clients only send filename metadata
+      fileUrl: doc.url || doc.fileUrl || `/meta/${encodeURIComponent(String(doc.fileName || 'document.pdf'))}`,
       uploadedAt: new Date(),
       verificationStatus: 'PENDING'
     })) : [],
