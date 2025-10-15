@@ -83,7 +83,7 @@ export class MockDataService {
   static casteDatabase: { [key: string]: any } = {
     "973090065374": {
       applicantName: "Vikash Kumar",
-      fatherName: "Ram Lal",
+      fatherName: "Ramesh Lal",
       caste: "Bhil Meena",
       category: "ST",
       certificateNumber: "RSC/2023/SJE/184592",
