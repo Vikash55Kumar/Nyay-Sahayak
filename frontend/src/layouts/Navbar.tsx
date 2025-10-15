@@ -57,7 +57,7 @@ const Navbar: React.FC = () => {
                     {/* Branding Section */}
                     <div className="flex items-center space-x-4">
                         <Link to="/" className="flex items-center space-x-4 group">
-                            <img src={logo} alt="Nyay Sahayak Logo" className="h-16 w-[70px] drop-shadow-lg transition-transform group-hover:scale-105" />
+                            <img src={logo} alt="Nyay Sahayak Logo" className="h-16 w-[65px] drop-shadow-lg transition-transform group-hover:scale-105" />
                         </Link>
                     </div>
 
