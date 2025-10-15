@@ -3,6 +3,11 @@ import React, { useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import useEmblaCarousel from 'embla-carousel-react';
 import { ArrowRight, ShieldAlert, Heart, Zap, Eye, Users, Lock, Megaphone } from 'lucide-react';
+import Display1 from '../../assets/display1.png';
+import Display2 from '../../assets/display2.png';
+import Display3 from '../../assets/display3.png';
+import Display4 from '../../assets/display4.png';
+import HeroImage from '../../assets/hero-image.png';
 
 const PromiseCard = ({ icon: Icon, title, description }: { icon: React.ElementType, title: string, description: string }) => (
     <div className="flex items-start space-x-4">
@@ -19,13 +24,16 @@ const PromiseCard = ({ icon: Icon, title, description }: { icon: React.ElementTy
 // --- NEW Banner Carousel Component ---
 const bannerSlides = [
     {
-        image: "https://images.unsplash.com/photo-1598202012110-1e2b3ef7740e?q=80&w=1932&auto=format&fit=crop",
+        image: Display1,
     },
     {
-        image: "https://images.unsplash.com/photo-1523438885209-e1935e4736f3?q=80&w=2070&auto=format&fit=crop",
+        image: Display2,
     },
     {
-        image: "https://images.unsplash.com/photo-1620138459495-a2af3a347953?q=80&w=2070&auto=format&fit=crop",
+        image: Display3,
+    },
+    {
+        image: Display4,
     },
 ];
 
@@ -78,7 +86,7 @@ const BannerCarousel: React.FC = () => {
 
     return (
         <section
-            className="relative w-full h-[40vh] overflow-hidden"
+            className="relative w-full h-[80vh] overflow-hidden"
             onMouseEnter={() => setIsPaused(true)}
             onMouseLeave={() => setIsPaused(false)}
             onFocus={() => setIsPaused(true)}
@@ -181,7 +189,7 @@ const LandingPage: React.FC = () => {
                             </div>
                         </div>
                         <div className="hidden md:block">
-                            <img src="https://images.unsplash.com/photo-1598202012110-1e2b3ef7740e?q=80&w=1932&auto=format&fit=crop" alt="Hands offering support" className="rounded-lg shadow-2xl" />
+                            <img src={HeroImage} alt="Hands offering support" className="rounded-lg shadow-2xl" />
                         </div>
                     </div>
                 </div>
