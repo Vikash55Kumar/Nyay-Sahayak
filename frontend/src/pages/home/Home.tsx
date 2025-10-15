@@ -1,6 +1,8 @@
-import React from 'react';
+
+import React, { useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowRight, ShieldAlert, Heart, Zap, Eye, Users, Lock } from 'lucide-react';
+import useEmblaCarousel from 'embla-carousel-react';
+import { ArrowRight, ShieldAlert, Heart, Zap, Eye, Users, Lock, Megaphone } from 'lucide-react';
 
 const PromiseCard = ({ icon: Icon, title, description }: { icon: React.ElementType, title: string, description: string }) => (
     <div className="flex items-start space-x-4">
@@ -14,11 +16,150 @@ const PromiseCard = ({ icon: Icon, title, description }: { icon: React.ElementTy
     </div>
 );
 
+// --- NEW Banner Carousel Component ---
+const bannerSlides = [
+    {
+        image: "https://images.unsplash.com/photo-1598202012110-1e2b3ef7740e?q=80&w=1932&auto=format&fit=crop",
+    },
+    {
+        image: "https://images.unsplash.com/photo-1523438885209-e1935e4736f3?q=80&w=2070&auto=format&fit=crop",
+    },
+    {
+        image: "https://images.unsplash.com/photo-1620138459495-a2af3a347953?q=80&w=2070&auto=format&fit=crop",
+    },
+];
+
+const BannerCarousel: React.FC = () => {
+    const [emblaRef, emblaApi] = useEmblaCarousel({ loop: true });
+    const [selectedIndex, setSelectedIndex] = React.useState(0);
+    const autoplayRef = React.useRef<number | null>(null);
+    const [isPaused, setIsPaused] = React.useState(false);
+
+    const scrollTo = useCallback((index: number) => emblaApi && emblaApi.scrollTo(index), [emblaApi]);
+
+    useEffect(() => {
+        if (!emblaApi) return;
+        const onSelect = () => setSelectedIndex(emblaApi.selectedScrollSnap());
+        emblaApi.on('select', onSelect);
+
+        return () => {
+            emblaApi.off('select', onSelect);
+        };
+    }, [emblaApi]);
+
+    useEffect(() => {
+        // autoplay controller
+        const start = () => {
+            if (autoplayRef.current) return;
+            autoplayRef.current = window.setInterval(() => {
+                if (emblaApi && !isPaused) emblaApi.scrollNext();
+            }, 4500);
+        };
+        const stop = () => {
+            if (autoplayRef.current) {
+                clearInterval(autoplayRef.current);
+                autoplayRef.current = null;
+            }
+        };
+        start();
+        return () => stop();
+    }, [emblaApi, isPaused]);
+
+    // keyboard nav
+    useEffect(() => {
+        const onKey = (e: KeyboardEvent) => {
+            if (!emblaApi) return;
+            if (e.key === 'ArrowRight') emblaApi.scrollNext();
+            if (e.key === 'ArrowLeft') emblaApi.scrollPrev();
+        };
+        window.addEventListener('keydown', onKey);
+        return () => window.removeEventListener('keydown', onKey);
+    }, [emblaApi]);
+
+    return (
+        <section
+            className="relative w-full h-[40vh] overflow-hidden"
+            onMouseEnter={() => setIsPaused(true)}
+            onMouseLeave={() => setIsPaused(false)}
+            onFocus={() => setIsPaused(true)}
+            onBlur={() => setIsPaused(false)}
+            aria-roledescription="carousel"
+        >
+            <div className="overflow-hidden h-full" ref={emblaRef}>
+                <div className="flex h-full">
+                    {bannerSlides.map((slide, index) => (
+                        <div className="relative flex-[0_0_100%] h-full" key={index}>
+                            <img src={slide.image} loading="lazy" className="absolute inset-0 w-full h-full object-cover" alt={`Banner ${index + 1}`} />
+                        </div>
+                    ))}
+                </div>
+            </div>
+            {/* Dots */}
+            <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex space-x-3">
+                {bannerSlides.map((_, index) => (
+                    <button key={index} onClick={() => scrollTo(index)} className={`w-3 h-3 rounded-full transition-all ${selectedIndex === index ? 'bg-white scale-125' : 'bg-white/50'}`} aria-label={`Go to slide ${index + 1}`}></button>
+                ))}
+            </div>
+        </section>
+    );
+};
+
+// --- NEW News Ticker Component ---
+const newsItems = [
+    "The helpline number for Jodhpur district has been updated.",
+    "Applications for the Dr. Ambedkar Scheme are now being processed faster.",
+    "Public holiday on October 20th, 2025. Offices will remain closed.",
+];
+
+const NewsTicker: React.FC = () => {
+    const marqueeRef = React.useRef<HTMLDivElement | null>(null);
+    const [paused, setPaused] = React.useState(false);
+    const [duration] = React.useState<number>(10);
+
+    return (
+        <div className="bg-slate-800 text-white py-2 overflow-hidden">
+            <div className="flex items-center">
+                <div className="flex-shrink-0 px-4 flex items-center space-x-2">
+                    <Megaphone size={18} className="text-amber-400" />
+                    <span className="font-bold text-sm">Latest Updates</span>
+                </div>
+                <div className="flex-grow relative h-6 overflow-hidden" onMouseEnter={() => setPaused(true)} onMouseLeave={() => setPaused(false)}>
+                    <div
+                        ref={marqueeRef}
+                        className="absolute whitespace-nowrap text-sm text-slate-300 leading-6"
+                        style={{
+                            willChange: 'transform',
+                            animation: `marquee ${duration}s linear infinite`,
+                            animationPlayState: paused ? 'paused' : 'running'
+                        }}
+                        aria-live="polite"
+                    >
+                        {/* duplicate content for seamless loop */}
+                        {[...newsItems, ...newsItems].map((item, index) => (
+                            <span key={index} className="mx-16">{item}</span>
+                        ))}
+                    </div>
+                </div>
+            </div>
+
+            <style>{`
+                @keyframes marquee {
+                    0% { transform: translateX(0%); }
+                    100% { transform: translateX(-50%); }
+                }
+            `}</style>
+        </div>
+    );
+};
+
 const LandingPage: React.FC = () => {
 
     return (
         <div className="bg-white text-slate-800">
-            
+            <BannerCarousel />
+
+            {/* --- NEW News Ticker --- */}
+            <NewsTicker />
             {/* --- Hero Section --- */}
             <section className="relative bg-slate-50">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
