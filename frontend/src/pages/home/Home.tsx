@@ -23,18 +23,10 @@ const PromiseCard = ({ icon: Icon, title, description }: { icon: React.ElementTy
 
 // --- NEW Banner Carousel Component ---
 const bannerSlides = [
-    {
-        image: Display1,
-    },
-    {
-        image: Display2,
-    },
-    {
-        image: Display3,
-    },
-    {
-        image: Display4,
-    },
+    { image: Display1 },
+    { image: Display3 },
+    { image: Display2 },
+    { image: Display4 },
 ];
 
 const BannerCarousel: React.FC = () => {
@@ -61,7 +53,7 @@ const BannerCarousel: React.FC = () => {
             if (autoplayRef.current) return;
             autoplayRef.current = window.setInterval(() => {
                 if (emblaApi && !isPaused) emblaApi.scrollNext();
-            }, 4500);
+            }, 3500);
         };
         const stop = () => {
             if (autoplayRef.current) {
@@ -86,7 +78,7 @@ const BannerCarousel: React.FC = () => {
 
     return (
         <section
-            className="relative w-full h-[80vh] overflow-hidden"
+            className="relative w-full h-[50vh] overflow-hidden"
             onMouseEnter={() => setIsPaused(true)}
             onMouseLeave={() => setIsPaused(false)}
             onFocus={() => setIsPaused(true)}
@@ -97,7 +89,7 @@ const BannerCarousel: React.FC = () => {
                 <div className="flex h-full">
                     {bannerSlides.map((slide, index) => (
                         <div className="relative flex-[0_0_100%] h-full" key={index}>
-                            <img src={slide.image} loading="lazy" className="absolute inset-0 w-full h-full object-cover" alt={`Banner ${index + 1}`} />
+                            <img src={slide.image} loading="lazy" className="absolute inset-0 w-full h-full object-fill" alt={`Banner ${index + 1}`} />
                         </div>
                     ))}
                 </div>
@@ -122,7 +114,7 @@ const newsItems = [
 const NewsTicker: React.FC = () => {
     const marqueeRef = React.useRef<HTMLDivElement | null>(null);
     const [paused, setPaused] = React.useState(false);
-    const [duration] = React.useState<number>(10);
+    const [duration] = React.useState<number>(15);
 
     return (
         <div className="bg-slate-800 text-white py-2 overflow-hidden">
@@ -134,7 +126,7 @@ const NewsTicker: React.FC = () => {
                 <div className="flex-grow relative h-6 overflow-hidden" onMouseEnter={() => setPaused(true)} onMouseLeave={() => setPaused(false)}>
                     <div
                         ref={marqueeRef}
-                        className="absolute whitespace-nowrap text-sm text-slate-300 leading-6"
+                        className="absolute whitespace-nowrap text-sm font-semibold text-white leading-6"
                         style={{
                             willChange: 'transform',
                             animation: `marquee ${duration}s linear infinite`,
@@ -180,10 +172,10 @@ const LandingPage: React.FC = () => {
                                 A dedicated portal for financial assistance under the Prevention of Atrocities (PoA) and Protection of Civil Rights (PCR) Acts. We are here to ensure your rights are protected and upheld.
                             </p>
                             <div className="mt-10 flex flex-col sm:flex-row items-center justify-center md:justify-start gap-4">
-                                <Link to="/apply/atrocity" className="w-full sm:w-auto inline-flex items-center justify-center px-6 py-3 bg-red-600 border border-transparent rounded-md font-semibold text-white hover:bg-red-700 transition-all text-base shadow-lg">
+                                <Link to="/dashboard" className="w-full sm:w-auto inline-flex items-center justify-center px-6 py-3 bg-red-600 border border-transparent rounded-md font-semibold text-white hover:bg-red-700 transition-all text-base shadow-lg">
                                     Get Atrocity Relief
                                 </Link>
-                                <Link to="/apply/marriage" className="w-full sm:w-auto inline-flex items-center justify-center px-6 py-3 bg-blue-600 border border-transparent rounded-md font-semibold text-white hover:bg-blue-700 transition-all text-base shadow-lg">
+                                <Link to="/dashboard" className="w-full sm:w-auto inline-flex items-center justify-center px-6 py-3 bg-blue-600 border border-transparent rounded-md font-semibold text-white hover:bg-blue-700 transition-all text-base shadow-lg">
                                     Claim Marriage Incentive
                                 </Link>
                             </div>
